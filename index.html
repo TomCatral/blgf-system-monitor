@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>BLGF Document Tracking — Status</title>
+    <style>
+      :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #07111f; color: #e7eef8; }
+      main { width: min(680px, calc(100% - 32px)); padding: 32px; border: 1px solid #23334b; border-radius: 20px; background: #0d1a2c; box-shadow: 0 24px 70px #0008; }
+      header { display: flex; align-items: center; gap: 14px; }
+      h1 { margin: 0; font-size: clamp(1.35rem, 4vw, 2rem); }
+      p { color: #9eb0c9; }
+      .dot { width: 14px; height: 14px; flex: 0 0 auto; border-radius: 999px; background: #94a3b8; box-shadow: 0 0 18px currentColor; }
+      .online { color: #34d399; background: #34d399; }
+      .offline { color: #fb7185; background: #fb7185; }
+      .checking { color: #fbbf24; background: #fbbf24; }
+      .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 26px 0; }
+      .metric { padding: 18px; border-radius: 14px; background: #111f33; }
+      .label { display: block; margin-bottom: 7px; color: #8296b2; font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; }
+      .value { font-size: 1.06rem; font-weight: 650; overflow-wrap: anywhere; }
+      footer { display: flex; justify-content: space-between; gap: 16px; color: #7186a3; font-size: .82rem; }
+      a { color: #7dd3fc; }
+      @media (max-width: 520px) { main { padding: 24px; } .grid { grid-template-columns: 1fr; } footer { flex-direction: column; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header><span id="dot" class="dot checking"></span><h1 id="status">Checking system…</h1></header>
+      <p>BLGF Region II Document Tracking System</p>
+      <section class="grid" aria-live="polite">
+        <div class="metric"><span class="label">API</span><span id="api" class="value">Checking</span></div>
+        <div class="metric"><span class="label">Database</span><span id="database" class="value">Checking</span></div>
+        <div class="metric"><span class="label">Response time</span><span id="latency" class="value">—</span></div>
+        <div class="metric"><span class="label">Last checked</span><span id="checked" class="value">—</span></div>
+      </section>
+      <footer><span>Refreshes every 30 seconds</span><a href="https://blgfr2-doctract.vercel.app/">Open application</a></footer>
+    </main>
+    <script>
+      const endpoint = 'https://blgfr2-doctract.vercel.app/api/health';
+      const byId = (id) => document.getElementById(id);
+      async function check() {
+        const started = performance.now();
+        byId('dot').className = 'dot checking';
+        try {
+          const response = await fetch(endpoint, { cache: 'no-store' });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const health = await response.json();
+          const healthy = health.status === 'ok' && health.mysql?.connected === true;
+          byId('status').textContent = healthy ? 'All systems operational' : 'System degraded';
+          byId('dot').className = `dot ${healthy ? 'online' : 'offline'}`;
+          byId('api').textContent = health.status === 'ok' ? 'Online' : 'Degraded';
+          byId('database').textContent = health.mysql?.connected ? 'Connected' : 'Unavailable';
+        } catch (error) {
+          byId('status').textContent = 'System unavailable';
+          byId('dot').className = 'dot offline';
+          byId('api').textContent = error.message;
+          byId('database').textContent = 'Unknown';
+        }
+        byId('latency').textContent = `${Math.round(performance.now() - started)} ms`;
+        byId('checked').textContent = new Date().toLocaleTimeString();
+      }
+      check();
+      setInterval(check, 30000);
+    </script>
+  </body>
+</html>
